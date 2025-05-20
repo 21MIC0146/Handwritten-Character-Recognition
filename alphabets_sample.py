@@ -17,19 +17,11 @@ y = emnist_data['0']
 # Split the data into training and testing sets
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
-# Reshape the data into 28x28 images
-x_train = np.reshape(x_train.values, (x_train.shape[0], 28, 28))
-x_test = np.reshape(x_test.values, (x_test.shape[0], 28, 28))
+# Reshape the data into 28x28 images with 1 channel
+x_train = np.reshape(x_train.values, (x_train.shape[0], 28, 28, 1)) / 255.0
+x_test = np.reshape(x_test.values, (x_test.shape[0], 28, 28, 1)) / 255.0
 
-# Add a channel dimension (for grayscale images)
-x_train = x_train.reshape(x_train.shape[0], 28, 28, 1)
-x_test = x_test.reshape(x_test.shape[0], 28, 28, 1)
-
-# Normalize pixel values to between 0 and 1
-x_train = x_train / 255.0
-x_test = x_test / 255.0
-
-# Convert labels to one-hot encoded vectors
+# Convert labels to one-hot encoding
 y_train = to_categorical(y_train, num_classes=26)
 y_test = to_categorical(y_test, num_classes=26)
 
@@ -51,4 +43,37 @@ model = Sequential([
 model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Train the model
-model.fit(x_train, y_train, epochs=10, validation_data=(x_test, y_test))
+history = model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test))
+
+# Evaluate the model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print("Test accuracy:", test_acc)
+
+# Plot some sample predicted characters
+plt.figure(figsize=(10, 10))
+for i in range(25):
+    plt.subplot(5, 5, i+1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(x_test[i].reshape(28, 28), cmap=plt.cm.binary)
+    predicted_label = np.argmax(model.predict(x_test[i:i+1]))
+    true_label = np.argmax(y_test[i])
+    color = 'green' if predicted_label == true_label else 'red'
+    plt.xlabel(f"Predicted: {chr(predicted_label + 65)}, True: {chr(true_label + 65)}", color=color)
+plt.tight_layout()
+plt.show()
+
+# Plot training history
+plt.plot(history.history['accuracy'], label='accuracy')
+plt.plot(history.history['val_accuracy'], label='val_accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.ylim([0, 1])
+plt.legend(loc='lower right')
+plt.title("Training and Validation Accuracy")
+plt.show()
+
+# Save the model
+model.save('alphabet_model.h5')
+print("Model saved as 'alphabet_model.h5'")
